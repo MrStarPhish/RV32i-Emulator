@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="RV32i Emulator/RV32i Emulator.vcxproj" Id="bf3febde-0a8a-4038-b85a-fe873803b5d7" />
+</Solution>
