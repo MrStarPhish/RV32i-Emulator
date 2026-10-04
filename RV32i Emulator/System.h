@@ -66,7 +66,7 @@ struct System {
 		// here, the most significant [1:7] bits are opcode i.e 0011011. THe very first bit '1' at position [0] is the not of opcode, but other information. 
 		// SO, I'm gonna convert the instruction back to logical format. Little Endian -> Actual Format, where opcode is at Least Significant 7 bits.
 
-		uint8_t opcode = 0;
+		uint8_t opcode = 0; 
 		
 
 
