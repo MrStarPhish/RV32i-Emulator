@@ -1,8 +1,6 @@
 #pragma once
 #include<iostream>
 
-using namespace std;
-
 const int MEMORY_SIZE = 4096; // bytes
 
 struct MEMORY {
@@ -33,7 +31,7 @@ struct MEMORY {
 			return true;
 		}
 		else {
-			cout << "Memory read error: address out of bounds" << endl;
+			std::cout << "Memory read error: address out of bounds\n";
 			return false;
 		}
 	}
@@ -47,7 +45,7 @@ struct MEMORY {
 			data[address + 3] = (value >> 24) & 0xFF;
 		}
 		else {
-			cout << "Memory write error: address out of bounds" << endl;
+			std::cout << "Memory write error: address out of bounds\n";
 		}
 	}
 
@@ -57,6 +55,6 @@ struct MEMORY {
 		{
 			printf("%x ", data[i]);
 		}
-		cout << endl;
+		std::cout << "\n";
 	}
 };

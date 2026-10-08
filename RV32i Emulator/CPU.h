@@ -1,7 +1,6 @@
 #pragma once
 #include<iostream>
 
-using namespace std;
 
 struct CPU {
 	uint32_t registers[32];

@@ -2,6 +2,8 @@
 #include<conio.h>
 
 #include "System.h"
+#include "Dashboard.h"
+#include "ConsoleBufferEssentials.h"
 
 using namespace std;
 
@@ -25,10 +27,14 @@ int main()
 	//system.decode(instruction, decodedInstruction);
 	//system.execute(decodedInstruction);
 
-	cout << "Register 1: " << system.cpu.registers[1] << endl;
-	cout << "Register 2: " << system.cpu.registers[2] << endl;
-	cout << "Register 3: " << system.cpu.registers[3] << endl << endl;
+	//cout << "Register 1: " << system.cpu.registers[1] << endl;
+	//cout << "Register 2: " << system.cpu.registers[2] << endl;
+	//cout << "Register 3: " << system.cpu.registers[3] << endl << endl;
 
+	Dashboard dashboard;
+	dashboard.loadSystem(system);
+	dashboard.bufferRegisters();
+	dashboard.render();
 	
 
 	cout << "hello world" << endl;

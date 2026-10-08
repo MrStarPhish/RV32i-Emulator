@@ -6,38 +6,49 @@
 #include "MEMORY.h"
 #include "RVenums.h"
 
-using namespace std;
 
 struct System {
 	CPU cpu;
 	MEMORY memory;
 
-	void loadProgram(string filepath) // this will load the set of instructions from external .bin file
+
+	// --------------------------------- GETTERS / SETTERS -----------------------------
+	uint32_t* getRegisters() {
+		return cpu.registers;
+	}
+
+	int getNumRegisters() {
+		return sizeof(cpu.registers) / sizeof(cpu.registers[0]);
+	}
+
+	// --------------------------------- SYSTEM FUNCTIONS -----------------------------------
+
+	void loadProgram(std::string filepath) // this will load the set of instructions from external .bin file
 	{
 		// open .bin file given in "filepath" 
-		ifstream file;
-		file.open(filepath, ios::binary | ios::ate); // ate = at the end
+		std::ifstream file;
+		file.open(filepath, std::ios::binary | std::ios::ate); // ate = at the end
 		if (!file)
 		{
-			cout << "Load Program Error: File not found\n";
+			std::cout << "Load Program Error: File not found\n";
 			return;
 		}
 
-		cout << "Loading Program to Memory..." << endl;
+		std::cout << "Loading Program to Memory...\n";
 
-		streamsize fileSize = file.tellg(); // get current position, it's already at the end.
-		file.seekg(0, ios::beg); // move the pointer back to beginning
+		std::streamsize fileSize = file.tellg(); // get current position, it's already at the end.
+		file.seekg(0, std::ios::beg); // move the pointer back to beginning
 
 		// point to the destination memory
 		uint8_t *destination = &(memory.data[memory.codeSectionIdx]);
 
 		if (file.read(reinterpret_cast<char*>(destination), fileSize)) // load the whole file at once
 		{
-			cout << "Program loaded successfully: Loaded"<< fileSize <<"bytes." << endl;
+			std::cout << "Program loaded successfully: Loaded" << fileSize << "bytes.\n";
 		}
 		else
 		{
-			cout << "Load Program Error: Failed to load the program.\n";
+			std::cout << "Load Program Error: Failed to load the program.\n";
 		}
 
 
@@ -162,12 +173,6 @@ struct System {
 				//extract related parameters
 				uint8_t* params = reinterpret_cast<uint8_t*>(&decodedInstruction);
 				// params[0] = operationTYpe, params[1] = rd, params[2] = rs1, params[3] = rs2
-				
-				for (int i = 0; i < 4; i++)
-				{
-					cout << "Params[" << i << "]: " << (int)params[i] << endl;
-				}
-
 				//now execute
 				if (params[1] != 0) // write to R0 should be ignored. R0 remains 0.
 				{

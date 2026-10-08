@@ -13,7 +13,6 @@
 #include<ctime>
 #include<sstream> // for stringstream
 #include<utility> // for pair<>
-using namespace std;
 
 const int WIDTH = 120;
 const int HEIGHT = 50;
@@ -23,7 +22,7 @@ const int Y_BOUND = HEIGHT-10; // Boundaries Coords
 
 CHAR_INFO buffer[WIDTH * HEIGHT]; // character + color info
 
-enum ColorCode
+enum ColorCode : uint8_t
 {
     BLACK, BLUE, GREEN, CYAN, RED, MAGENTA, YELLOW, WHITE, GREY, L_BLUE, L_GREEN, L_CYAN, L_RED, L_MAGENTA, L_YELLOW, L_WHITE, DEFAULT = 7, DEFAULTBG = 0
 };
@@ -71,7 +70,7 @@ void saveCoords(int& x, int& y)
     getCursorPosition(x, y);
 }
 
-void saveCoords(pair<int, int>& coords)
+void saveCoords(std::pair<int, int>& coords)
 {
     getCursorPosition(coords.first, coords.second);
 }
@@ -89,7 +88,7 @@ void loadCoords(int x, int y)
 }
 
 // Overload: Loads from a std::pair
-void loadCoords(pair<int, int> coords)
+void loadCoords(std::pair<int, int> coords)
 {
     gotoxy(coords.first, coords.second);
 }
@@ -101,7 +100,7 @@ void clearLine(int x, int y, int length = 1)
     gotoxy(x, y);
     for (int i = 0; i < length; i++)
     {
-        cout << " ";
+        std::cout << " ";
     }
 }
 
@@ -156,7 +155,7 @@ void eraseString(int x, int y, int length) // the string of characters to be rem
     }
 }
 
-void bufferString(int x, int y, string line, int textColor = DEFAULT, int bgColor = BLACK) // coords, string, RGBA
+void bufferString(int x, int y, std::string line, int textColor = DEFAULT, int bgColor = BLACK) // coords, string, RGBA
 {
     WORD colorAttribute = textColor | (bgColor << 4);
     if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
@@ -171,7 +170,7 @@ void bufferString(int x, int y, string line, int textColor = DEFAULT, int bgColo
 }
 
 // Stamps a 2D Sprite/Grid into Buffer ; x, y, arr, arrSize, Attributes
-void bufferObject(int startX, int startY, string sprite[], int totalRows, int textColor = DEFAULT, int backgroundColor = BLACK)
+void bufferObject(int startX, int startY, std::string sprite[], int totalRows, int textColor = DEFAULT, int backgroundColor = BLACK)
 {
     for (int i = 0; i < totalRows; i++)
     {
@@ -230,23 +229,6 @@ void SetConsoleWindowSize(int width, int height)
 
 // ============================================= UTILITY
 
-string getCurrentTime()
-{
-    time_t now = time(0);
-    tm ltm;
-    localtime_s(&ltm, &now);
-
-    stringstream ss;
-    ss << 1900 + ltm.tm_year << "-"
-        << (ltm.tm_mon + 1) << "-"
-        << ltm.tm_mday << " "
-        << ltm.tm_hour << ":"
-        << ltm.tm_min << ":"
-        << ltm.tm_sec;
-
-    return ss.str();  // returning time-stamp string like "2025-07-02 23:18:15"
-}
-
 void bufferBoundary()
 {
     buffer[0] = { 0x2A, 0x07 };
@@ -257,7 +239,4 @@ void bufferBoundary()
     buffer[(39 * WIDTH) + 40] = { 0x2A, 0x07 };
     buffer[(39 * WIDTH) + 79] = { 0x2A, 0x07 };
     buffer[(39 * WIDTH) + 90] = { 0x2A, 0x07 };
-
-    
-
 }
