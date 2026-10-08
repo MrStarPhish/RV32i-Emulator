@@ -29,5 +29,14 @@
     <ClInclude Include="MEMORY.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RVenums.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConsoleBufferEssentials.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dashboard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

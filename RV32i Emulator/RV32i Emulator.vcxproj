@@ -142,8 +142,11 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConsoleBufferEssentials.h" />
     <ClInclude Include="CPU.h" />
+    <ClInclude Include="Dashboard.h" />
     <ClInclude Include="MEMORY.h" />
+    <ClInclude Include="RVenums.h" />
     <ClInclude Include="System.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
