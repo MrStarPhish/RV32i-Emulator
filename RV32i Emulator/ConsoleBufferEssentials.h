@@ -14,11 +14,11 @@
 #include<sstream> // for stringstream
 #include<utility> // for pair<>
 
-const int WIDTH = 120;
-const int HEIGHT = 50;
+const int WIDTH = 165; // num pixels
+const int HEIGHT = 45;
 
-const int X_BOUND = WIDTH;
-const int Y_BOUND = HEIGHT-10; // Boundaries Coords
+const int X_BOUND = WIDTH; // X must be < WIDTH
+const int Y_BOUND = HEIGHT; // Boundaries Coords
 
 CHAR_INFO buffer[WIDTH * HEIGHT]; // character + color info
 
@@ -229,14 +229,14 @@ void SetConsoleWindowSize(int width, int height)
 
 // ============================================= UTILITY
 
-void bufferBoundary()
-{
-    buffer[0] = { 0x2A, 0x07 };
-    buffer[40] = { 0x2A, 0x07 };
-    buffer[79] = { 0x2A, 0x07 };
-    buffer[80] = { 0x2A, 0x07 };
-    buffer[(39*WIDTH) + 0] = { 0x2A, 0x07 };
-    buffer[(39 * WIDTH) + 40] = { 0x2A, 0x07 };
-    buffer[(39 * WIDTH) + 79] = { 0x2A, 0x07 };
-    buffer[(39 * WIDTH) + 90] = { 0x2A, 0x07 };
-}
+//void bufferBoundary()
+//{
+//    buffer[0] = { 0x2A, 0x07 };
+//    buffer[40] = { 0x2A, 0x07 };
+//    buffer[79] = { 0x2A, 0x07 };
+//    buffer[80] = { 0x2A, 0x07 };
+//    buffer[(39*WIDTH) + 0] = { 0x2A, 0x07 };
+//    buffer[(39 * WIDTH) + 40] = { 0x2A, 0x07 };
+//    buffer[(39 * WIDTH) + 79] = { 0x2A, 0x07 };
+//    buffer[(39 * WIDTH) + 90] = { 0x2A, 0x07 };
+//}
