@@ -14,6 +14,18 @@ struct MEMORY {
 		}
 	}
 
+	bool read8(uint32_t address, uint8_t& value) // reads the specified byte
+	{
+		if (address < MEMORY_SIZE) {
+			value = data[address];
+			return true;
+		}
+		else {
+			std::cout << "Memory read error: address out of bounds\n";
+			return false;
+		}
+	}
+
 	bool read32(uint32_t address, uint32_t &value) // reads the specified 4bytes in accordance to little endian format
 	{
 		if (address + 3 < MEMORY_SIZE) {

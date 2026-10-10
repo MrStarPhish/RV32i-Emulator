@@ -14,9 +14,9 @@ int main()
 	std::cout << "If you're seeing this message, then Dashboard failed to render." << std::endl;
 	gotoxy(0, 0);
 
-	// -- Sample Program 
-	//system.cpu.registers[1] = 5;
-	//system.cpu.registers[2] = 3;
+	 //-- Sample Program 
+	system.cpu.registers[1] = 12;
+	system.cpu.registers[2] = 10;
 
 	//uint32_t instruction = 0;
 	//system.fetch(instruction);

@@ -22,9 +22,11 @@ struct Dashboard {
 	Region registerRegion = { 0, 2, (WIDTH-1)/3, 20 };
 	Region controlRegion = { (WIDTH - 1) / 3 , 2, (WIDTH - 1) / 6, 20 };
 	Region stackRegion = { ((WIDTH - 1) / 2)-1 , 2, ((WIDTH - 1) / 6) + 2, 20 };
+	Region memoryRegion = { ((WIDTH - 1) / 2)+28, 22, (WIDTH - 1) / 3, 20 };
 	Region commandRegion = { 0, 42, WIDTH - 1, 2 };
 
 	System* system;
+	uint32_t memoryPreviewAddress = 0x00000000; // starting address for memory region display
 
 	void loadSystem(System &sys)
 	{
@@ -54,6 +56,7 @@ struct Dashboard {
 		bufferRegionBoundary(registerRegion);
 		bufferRegionBoundary(controlRegion);
 		bufferRegionBoundary(stackRegion);
+		bufferRegionBoundary(memoryRegion);
 		bufferRegionBoundary(commandRegion);
 	}
 
@@ -62,11 +65,15 @@ struct Dashboard {
 		bufferString(headerRegion.x + 3, headerRegion.y + 1, "RV32i Emulator Dashboard", CYAN, BLACK);
 		bufferString(stackRegion.x + 11, stackRegion.y, "STACK", YELLOW, BLACK);
 		bufferString(commandRegion.x + 120, commandRegion.y + 1, "INSERT COMMAND HERE | /cmds for more info", YELLOW, BLACK);
-		bufferString(controlRegion.x + 6, controlRegion.y, "CONTROL SECTION", YELLOW, BLACK);
+		bufferString(controlRegion.x + 10, controlRegion.y, "CONTROL", YELLOW, BLACK);
 		bufferString(registerRegion.x + 23, registerRegion.y, "REGISTERS", YELLOW, BLACK);
+		bufferString(memoryRegion.x + 24, memoryRegion.y, "MEMORY", YELLOW, BLACK);
 
-		bufferString(registerRegion.x + 3, registerRegion.y + registerRegion.height-1, "/set <reg> <hex>", YELLOW, BLACK);
+
+		bufferString(registerRegion.x + 3, registerRegion.y + registerRegion.height-1, "/setreg <reg> <hex>", YELLOW, BLACK);
 		bufferString(controlRegion.x + 3, controlRegion.y + controlRegion.height -1, "/step /undo /emit", YELLOW, BLACK);
+		bufferString(memoryRegion.x + 5, memoryRegion.y + memoryRegion.height - 1, "/mem <addr>     /setmem <addr> <hex>", YELLOW, BLACK);
+
 
 	}
 
@@ -85,19 +92,32 @@ struct Dashboard {
 		bufferRegisters();
 		bufferControlSection();
 		bufferStack();
+		bufferMemory();
 
 		renderBuffer();
 
 	}
 	// ------------------------------------------ HELPERS 
 
+	std::string toHex8(uint8_t value) // Hex - > 00 format
+	{
+		std::ostringstream out;
+		out << ""
+			<< std::hex
+			<< std::uppercase
+			<< std::setfill('0')
+			<< std::setw(2)
+			<< static_cast<unsigned int>(value);
+
+		return out.str();
+	}
 
 	std::string toHex32(uint32_t value) // Hex - > 0x00000000 format
 	{
 		std::ostringstream out;
 		out << ""
 			<< std::hex
-			<< std::nouppercase
+			<< std::uppercase
 			<< std::setfill('0')
 			<< std::setw(8)
 			<< value;
@@ -111,7 +131,7 @@ struct Dashboard {
 		
 		out << ""
 			<< std::hex
-			<< std::nouppercase
+			<< std::uppercase
 			<< std::setfill('0')
 			<< std::setw(2)
 			<< ((value >> 24) & 0xFF) << " "
@@ -304,6 +324,45 @@ struct Dashboard {
 			else {
 				bufferString(stackRegion.x + offset_x, stackRegion.y + offset_y + 2 + (i*2), "N/A", CYAN, BLACK);
 			}
+		}
+	}
+
+	// -------------------- MEMORY REGION
+	void bufferMemory()
+	{
+		if (!system) {
+			error_SystemNotLoaded();
+			return;
+		}
+
+
+		int offset_x = 3;
+		int offset_y = 3;
+
+		std::string byteNumbering = "00 01 02 03 04 05 06 07 08 09 0A 0B";
+		bufferString(memoryRegion.x + offset_x + 12, memoryRegion.y + offset_y - 1, byteNumbering, DEFAULT, BLACK);
+
+		uint32_t start = memoryPreviewAddress;
+		for (int i = 0; i < 8; i++)
+		{
+			uint32_t addr = start + i * 4;
+			uint8_t temp = 0;
+			std::string lineStr = "";
+			for (int j = 0; j < 12; j++)
+			{
+				temp = 0;
+				if (system->memory.read8(addr + j, temp))
+				{
+					lineStr += toHex8(temp) + " ";
+				}
+				else
+				{
+					lineStr += "?? ";
+				}
+			}
+			std::string currAddr = "0x" + toHex32(addr) + ": ";
+			bufferString(memoryRegion.x + offset_x, memoryRegion.y + offset_y + (i*2), currAddr, DEFAULT, BLACK);
+			bufferString(memoryRegion.x + offset_x + static_cast<int>(currAddr.length()), memoryRegion.y + offset_y + (i * 2), lineStr, GREEN, BLACK);
 		}
 	}
 };
