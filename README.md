@@ -1,7 +1,7 @@
 
 <img width="1325" height="750" alt="image" src="https://github.com/user-attachments/assets/69486aa0-bcc1-4033-a458-92b8a353b6c5" />
-(Current Progress)
-#===================
+(Under Development)
+# ===================
 # RV32I Emulator & Debugger
 
 An educational RISC-V emulator built to explore processor architecture, instruction execution, memory, and low-level debugging through implementation.
