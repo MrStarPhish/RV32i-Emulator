@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 #include <iomanip>
-#include "System.h"
+
 #include "ConsoleBufferEssentials.h" // import BUFFER and other essential functions
 #include "StateSnapshot.h"
 
@@ -26,30 +26,83 @@ struct Dashboard {
 	Region memoryRegion = { ((WIDTH - 1) / 2)+28, 22, (WIDTH - 1) / 3, 20 };
 	Region commandRegion = { 0, 42, WIDTH - 1, 2 };
 
-	StateSnapshot *system;
+	bool isLoaded = false;
+	StateSnapshot *snapshot;
+	HANDLE shmSnapshotHandle;
 
 	bool exitSignal = false;
 
 	void loadSnapshot(StateSnapshot &sys)
 	{
-		system = &sys;
+		snapshot = &sys;
 		sys.isDashboardOn = true;
+	}
+
+	bool loadShm()
+	{
+
+
+		//load the shm
+		shmSnapshotHandle = OpenFileMappingW(
+			FILE_MAP_ALL_ACCESS,
+			FALSE,
+			MAPPING_NAME
+		);
+
+		if (shmSnapshotHandle == nullptr)
+		{
+			std::cerr << "OpenFileMapping failed: " << GetLastError() << "\nMake sure the emulator is running first.\n";
+			return false;
+		}
+
+		// map the pointer to local var
+		snapshot = static_cast<StateSnapshot*>( 
+			MapViewOfFile(
+				shmSnapshotHandle,
+				FILE_MAP_ALL_ACCESS, 
+				0,
+				0,
+				sizeof(StateSnapshot)
+			)
+		);
+
+		if (snapshot == nullptr)
+		{
+			std::cerr << "Failed to map SHM Snapshot to local var: " << GetLastError() << "\n";
+			CloseHandle(shmSnapshotHandle);
+			return false;
+		}
+
+		std::cout << "Successfully loaded the SHM Snapshot.\n" << std::endl;
+		snapshot->isDashboardOn = isLoaded = true;
+		return true;
+	}
+
+	void closeShm()
+	{
+		UnmapViewOfFile(snapshot);
+		CloseHandle(shmSnapshotHandle);
 	}
 
 	void initialize() {
 		SetConsoleWindowSize(165, 45);
 		SetConsoleBufferSize(165, 45);
+		render();
 	}
 
 	void run()
 	{
 		do {
-			render();
+			if (snapshot->isUpdated) // only update if stateSnapshot updated
+			{
+				render();
+				snapshot->isUpdated = false;
+			}
 			input();
 			Sleep(100);
 		} while (!exitSignal);
 
-		system->isDashboardOn = false;
+		snapshot->isDashboardOn = false;
 		std::cout << "Dashboard Detached Successfully" << std::endl;
 	}
 
@@ -94,7 +147,7 @@ struct Dashboard {
 
 	void render()
 	{
-		if (!system) {
+		if (!snapshot) {
 			error_SystemNotLoaded();
 			return;
 		}
@@ -239,13 +292,13 @@ struct Dashboard {
 	//------------------ REGISTER SECTION
 	void bufferRegisters()
 	{
-		if (!system) {
+		if (!snapshot) {
 			error_SystemNotLoaded();
 			return;
 		}
 
-		uint32_t* registers = system->getRegisters();
-		int numRegisters = system->getNumRegisters();
+		uint32_t* registers = snapshot->getRegisters();
+		int numRegisters = snapshot->getNumRegisters();
 
 		int offset_x = 3;
 		int offset_y = 2;
@@ -275,12 +328,12 @@ struct Dashboard {
 
 	void bufferControlSection() 
 	{
-		if (!system) {
+		if (!snapshot) {
 			error_SystemNotLoaded();
 			return;
 		}
 
-		uint32_t pc = system->pc;
+		uint32_t pc = snapshot->pc;
 
 		int offset_x = 3;
 		int offset_y = 2;
@@ -343,7 +396,7 @@ struct Dashboard {
 		// get last PC here. If not found, display N/A		
 		std::string lastPCVal = toHex32(lastPC);
 		lastPCVal += " -> ";
-		lastPCVal += toHex32(system->pc);
+		lastPCVal += toHex32(snapshot->pc);
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 15, lastPCVal, CYAN, BLACK);
 	}
 
@@ -352,13 +405,13 @@ struct Dashboard {
 
 	void bufferStack()
 	{
-		if (!system) {
+		if (!snapshot) {
 			error_SystemNotLoaded();
 			return;
 		}
-		uint32_t sp = system->registers[2]; // stack pointer is in register x2
+		uint32_t sp = snapshot->registers[2]; // stack pointer is in register x2
 
-		sp = system->registers[2];
+		sp = snapshot->registers[2];
 		int offset_x = 3;
 		int offset_y = 2;
 		std::string spStr = "SP: ";
@@ -370,7 +423,7 @@ struct Dashboard {
 			uint32_t addr = sp + i * 4;
 			uint32_t value;
 			
-			value = system->stackChunk[i];
+			value = snapshot->stackChunk[i];
 			std::string addrStr = toHex32_spaced(addr) + ": ";
 			std::string valueStr = toHex32_spaced(value);
 			bufferString(stackRegion.x + offset_x, stackRegion.y + offset_y + 2 + (i*2), addrStr, DEFAULT, BLACK);
@@ -401,7 +454,7 @@ struct Dashboard {
 	// -------------------- MEMORY REGION
 	void bufferMemory()
 	{
-		if (!system) {
+		if (!snapshot) {
 			error_SystemNotLoaded();
 			return;
 		}
@@ -414,12 +467,12 @@ struct Dashboard {
 		bufferString(memoryRegion.x + offset_x + 12, memoryRegion.y + offset_y - 1, byteNumbering, DEFAULT, BLACK);
 
 		// get memory chunk here
-		uint8_t* memChunk = system->memoryChunk;
+		uint8_t* memChunk = snapshot->memoryChunk;
 
 		//
 		
 
-		uint32_t start = system->memoryStart;
+		uint32_t start = snapshot->memoryStart;
 		for (int i = 0; i < 8; i++)
 		{
 			uint32_t addr = start + i * 4;
@@ -428,7 +481,7 @@ struct Dashboard {
 			for (int j = 0; j < 12; j++)
 			{
 				temp = 0;
-				temp = system->memoryChunk[(i * 12) + j];
+				temp = snapshot->memoryChunk[(i * 12) + j];
 				lineStr += toHex8(temp) + " ";
 			}
 			std::string currAddr = "0x" + toHex32(addr) + ": ";

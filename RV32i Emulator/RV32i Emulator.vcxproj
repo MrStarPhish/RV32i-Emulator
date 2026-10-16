@@ -139,7 +139,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main_engine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConsoleBufferEssentials.h" />

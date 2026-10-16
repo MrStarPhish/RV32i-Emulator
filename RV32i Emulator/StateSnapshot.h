@@ -2,9 +2,12 @@
 
 #include<iostream>
 
+constexpr wchar_t MAPPING_NAME[] = L"Local\\RV32i_DebugSnapshot_v1";
+
 struct StateSnapshot {
 	
 	bool isDashboardOn;
+	bool isUpdated;
 	bool regUpdate, controlUpdate, stackUpdate, memoryUpdate;
 
 	//reg section
@@ -22,7 +25,13 @@ struct StateSnapshot {
 	uint8_t memoryChunk[4 * 24]; // 8 rows, each row having 3*4 bytes
 
 	StateSnapshot() {
-		isDashboardOn = regUpdate = controlUpdate = stackUpdate = memoryUpdate = false;
+		init();
+	}
+
+	void init()
+	{
+
+		isDashboardOn = isUpdated = regUpdate = controlUpdate = stackUpdate = memoryUpdate = false;
 
 		numRegisters = 32; // default 32
 		for (int i = 0; i < 32; i++)

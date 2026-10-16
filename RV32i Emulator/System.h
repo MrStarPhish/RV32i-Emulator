@@ -2,13 +2,10 @@
 #include <iostream>
 #include <fstream>
 
-
 #include "CPU.h"
 #include "MEMORY.h"
 #include "RVenums.h"
 #include "StateSnapshot.h"
-
-
 
 struct System {
 	CPU cpu;
@@ -21,6 +18,7 @@ struct System {
 	uint32_t decodedBuffer[1];
 
 	StateSnapshot* snapshot; // the memory that will be Shared for Dashboard Process
+	HANDLE shmSnapshotHandle;
 
 	// --------------------------------- GETTERS / SETTERS -----------------------------
 	uint32_t* getRegisters() {
@@ -36,16 +34,72 @@ struct System {
 	void init()
 	{
 
+		//dummy SHM
 		snapshot = new StateSnapshot; // implement SHM here actually 
 		snapshot->numRegisters = NUM_REGISTERS;
+		
+		//implement actual SHM HERE
 		// initShm() here instead
 
 		updateSnapshot();
 	}
 
-	void initShm()
+	bool initShm()
 	{
 		// initialize SHM here and initialize the values. Specially bools to 0
+
+		// initiate SHM creation here
+		
+		shmSnapshotHandle = CreateFileMappingW(
+			INVALID_HANDLE_VALUE,
+			nullptr,
+			PAGE_READWRITE,
+			0,
+			static_cast<DWORD>(sizeof(StateSnapshot)),
+			MAPPING_NAME
+		);
+
+		// check for any error
+		if (shmSnapshotHandle == nullptr)
+		{
+			std::cerr << "Creating Shared Memory failed: " << GetLastError() << "\n";
+			return false;
+		}
+
+		bool alreadyExisted = (GetLastError() == ERROR_ALREADY_EXISTS);
+
+		// map the shared memory to a local var (our snapshot* here)
+		snapshot = nullptr;
+		snapshot = static_cast<StateSnapshot*>(
+			MapViewOfFile(
+				shmSnapshotHandle,
+				FILE_MAP_ALL_ACCESS,
+				0,
+				0,
+				sizeof(StateSnapshot)
+			)
+		);
+
+		if (snapshot == nullptr)
+		{
+			std::cerr << "Failed to map SHM to local pointer: " << GetLastError() << "\nClosed Connection.";
+			CloseHandle(shmSnapshotHandle);
+			return false;
+		}
+
+		if (!alreadyExisted)
+		{
+			snapshot->init(); // initialize values of the shm memory only if new SHM
+		}
+
+		std::cout << "StateSnapshot SHM successfully initiated.\n";
+		return true;
+	}
+
+	void closeShm()
+	{
+		UnmapViewOfFile(snapshot);
+		CloseHandle(shmSnapshotHandle);
 	}
 
 	void updateSnapshot() // updates content of Snapshot SHM
@@ -73,6 +127,8 @@ struct System {
 		{
 			snapshot->memoryChunk[i] = memory.data[snapshot->memoryStart + i];
 		}
+
+		snapshot->isUpdated = true;
 	}
 
 	
@@ -115,7 +171,8 @@ struct System {
 
 
 			system("cls");
-			updateSnapshot();
+			if (snapshot->isDashboardOn)
+				updateSnapshot();
 			for (int i = 0; i < 9; i++)
 			{
 				std::cout << "Register " << i << ": " << snapshot->registers[i];
