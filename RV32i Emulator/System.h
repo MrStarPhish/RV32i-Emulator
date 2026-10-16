@@ -13,6 +13,8 @@ struct System {
 
 
 	bool isRunning = false; // Running or Paused
+	bool isTerminated = false;
+	int numExecuted = 0;
 
 	uint32_t fetchedBuffer[1]; // make these bigger circular queues later
 	uint32_t decodedBuffer[1];
@@ -112,7 +114,11 @@ struct System {
 		}
 
 		// Constrol Section
+		snapshot->lastPc = snapshot->pc;
 		snapshot->pc = cpu.pc;
+		snapshot->fetchedInstr = fetchedBuffer[0];
+		snapshot->decodedInstr = decodedBuffer[0];
+		snapshot->numExecuted = numExecuted;
 
 		//Stack Section
 		for (int i = 0; i < 8; i++)
@@ -134,10 +140,8 @@ struct System {
 	
 
 	void run()
-	{
-		bool isTerminated = false;
-		
-		while (true)
+	{	
+		while (!isTerminated)
 		{
 			
 
@@ -155,24 +159,20 @@ struct System {
 
 
 			fetch(fetchedBuffer[0]);
-			if (fetchedBuffer[0] == 0) // Terminate program when found first 4bytes that are 0
-			{
-				isTerminated = true;
-				break;
-			}
 			decode(fetchedBuffer[0], decodedBuffer[0]);
-
 			execute(decodedBuffer[0]);
-
+			numExecuted++;
 
 			// Here, poll the updateSnapshot() every Nth cycle, 
 			// if (isDashboardOn)...
-
-
-
-			system("cls");
 			if (snapshot->isDashboardOn)
 				updateSnapshot();
+
+
+
+			
+			//temporary
+			system("cls");
 			for (int i = 0; i < 9; i++)
 			{
 				std::cout << "Register " << i << ": " << snapshot->registers[i];
@@ -254,6 +254,9 @@ struct System {
 
 		switch (opcode)
 		{
+			case 0x00: // temporarily using this for TERMINATION. 
+				decodedInstruction = 0;
+				break;
 			case InstructionType::Rtype: //if R-Type
 			{
 				//extract other fn bits, like fn3 and fn7
@@ -324,13 +327,16 @@ struct System {
 
 	bool execute(uint32_t decodedInstruction)
 	{
+		if (decodedInstruction == 0) // temporarily using this for Program Terminated. if Instruction = 0x00000000, then program gets terminated
+		{
+			isTerminated = true;
+			return true;
+		}
+
 		// get instruction from buffer
 		// read the Operation Bits
 		uint8_t operation = (decodedInstruction);
 
-		
-
-		
 		switch (operation)
 		{
 		case Operation::ADD: // ADD operation
