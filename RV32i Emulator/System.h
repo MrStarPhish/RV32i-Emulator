@@ -2,15 +2,25 @@
 #include <iostream>
 #include <fstream>
 
+
 #include "CPU.h"
 #include "MEMORY.h"
 #include "RVenums.h"
+#include "StateSnapshot.h"
+
 
 
 struct System {
 	CPU cpu;
 	MEMORY memory;
 
+
+	bool isRunning = false; // Running or Paused
+
+	uint32_t fetchedBuffer[1]; // make these bigger circular queues later
+	uint32_t decodedBuffer[1];
+
+	StateSnapshot* snapshot; // the memory that will be Shared for Dashboard Process
 
 	// --------------------------------- GETTERS / SETTERS -----------------------------
 	uint32_t* getRegisters() {
@@ -22,6 +32,104 @@ struct System {
 	}
 
 	// --------------------------------- SYSTEM FUNCTIONS -----------------------------------
+
+	void init()
+	{
+
+		snapshot = new StateSnapshot; // implement SHM here actually 
+		snapshot->numRegisters = NUM_REGISTERS;
+		// initShm() here instead
+
+		updateSnapshot();
+	}
+
+	void initShm()
+	{
+		// initialize SHM here and initialize the values. Specially bools to 0
+	}
+
+	void updateSnapshot() // updates content of Snapshot SHM
+	{
+		// Reg Section
+		//if (snapshot->regUpdate)  ////<-- use such flag for other cases as well
+		for (int i = 0; i < NUM_REGISTERS; i++)
+		{
+			snapshot->registers[i] = cpu.registers[i];
+		}
+
+		// Constrol Section
+		snapshot->pc = cpu.pc;
+
+		//Stack Section
+		for (int i = 0; i < 8; i++)
+		{
+			uint32_t temp;
+			memory.read32(cpu.registers[2] + i * 4, temp); // reg2 is sp 
+			snapshot->stackChunk[i] = temp;
+		}
+
+		//Memory Section
+		for (int i = 0; i < 4 * 24; i++)
+		{
+			snapshot->memoryChunk[i] = memory.data[snapshot->memoryStart + i];
+		}
+	}
+
+	
+
+	void run()
+	{
+		bool isTerminated = false;
+		
+		while (true)
+		{
+			
+
+			// here listen for any Keyboard input using _kbhit , to Pause program, or to map some key towards Guest Program
+			// if(_kbhit) -> first check for key pressed, and pause/terminate if escape or whatever defined pressed, otherwise send the rest of the input towards Guest Program
+			// make sure to poll it...read the input every Nth cycle ... NOT EVERY ITERATION TIME!
+
+			//then this:-
+			if (!isRunning) // if paused
+			{
+				char c = _getch(); // press some key to continue // this one is for testing , remove this LATER !
+
+				// read for any Incoming Command, or Key Pressed, and perform operation, and 'continue;' 
+			}
+
+
+			fetch(fetchedBuffer[0]);
+			if (fetchedBuffer[0] == 0) // Terminate program when found first 4bytes that are 0
+			{
+				isTerminated = true;
+				break;
+			}
+			decode(fetchedBuffer[0], decodedBuffer[0]);
+
+			execute(decodedBuffer[0]);
+
+
+			// Here, poll the updateSnapshot() every Nth cycle, 
+			// if (isDashboardOn)...
+
+
+
+			system("cls");
+			updateSnapshot();
+			for (int i = 0; i < 9; i++)
+			{
+				std::cout << "Register " << i << ": " << snapshot->registers[i];
+				std::cout << std::endl;
+			}
+		}
+		
+		if (isTerminated)
+		{
+			std::cout << "Program Terminated\n" << std::endl;
+		}
+	}
+
+	
 
 	void loadProgram(std::string filepath) // this will load the set of instructions from external .bin file
 	{
@@ -44,7 +152,7 @@ struct System {
 
 		if (file.read(reinterpret_cast<char*>(destination), fileSize)) // load the whole file at once
 		{
-			std::cout << "Program loaded successfully: Loaded" << fileSize << "bytes.\n";
+			std::cout << "Program loaded successfully: Loaded " << fileSize << " bytes.\n";
 		}
 		else
 		{
@@ -154,7 +262,7 @@ struct System {
 			}
 			return true;
 		}
-		
+		return false;
 	}
 
 	bool execute(uint32_t decodedInstruction)
@@ -194,6 +302,6 @@ struct System {
 		return true;
 		} 
 
-		
+		return false;
 	}
 };

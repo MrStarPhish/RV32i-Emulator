@@ -6,6 +6,7 @@
 #include <iomanip>
 #include "System.h"
 #include "ConsoleBufferEssentials.h" // import BUFFER and other essential functions
+#include "StateSnapshot.h"
 
 std::string altName[32]= { "ze","ra","sp","gp","tp","t0","t1","t2","s0","s1",
 "a0","a1","a2","a3","a4","a5","a6","a7","s2","s3","s4","s5", "s6", "s7","s8","s9","s10","s11","t3","t4", "t5","t6"        
@@ -25,19 +26,33 @@ struct Dashboard {
 	Region memoryRegion = { ((WIDTH - 1) / 2)+28, 22, (WIDTH - 1) / 3, 20 };
 	Region commandRegion = { 0, 42, WIDTH - 1, 2 };
 
-	System* system;
-	uint32_t memoryPreviewAddress = 0x00000000; // starting address for memory region display
+	StateSnapshot *system;
 
-	void loadSystem(System &sys)
+	bool exitSignal = false;
+
+	void loadSnapshot(StateSnapshot &sys)
 	{
 		system = &sys;
+		sys.isDashboardOn = true;
 	}
 
 	void initialize() {
 		SetConsoleWindowSize(165, 45);
 		SetConsoleBufferSize(165, 45);
-		bufferBoundary();
 	}
+
+	void run()
+	{
+		do {
+			render();
+			input();
+			Sleep(100);
+		} while (!exitSignal);
+
+		system->isDashboardOn = false;
+		std::cout << "Dashboard Detached Successfully" << std::endl;
+	}
+
 
 	void printError(const std::string& message) {
 		gotoxy(3, 30); // dummy location
@@ -97,6 +112,42 @@ struct Dashboard {
 		renderBuffer();
 
 	}
+
+	void input()
+	{
+		char key = 0;
+		if (_kbhit())
+		{
+			key = _getch();
+			processKey(key);
+		}
+	}
+
+	void processKey(char key)
+	{
+		switch (key)
+		{
+		case '/': // Toggle Command Input
+			invokeCommandInput();
+			break;
+		case 27: // Escape Key
+			exitSignal = true;
+			break;
+		}
+	}
+
+	void invokeCommandInput()
+	{
+		gotoxy(commandRegion.x + 1, commandRegion.y + 1);
+		std::cout << "> /";
+		std::string commandStr = "";
+		getline(std::cin, commandStr);
+		
+		//parse command
+		std::cout << commandStr << std::endl;
+		_getch();
+	}
+
 	// ------------------------------------------ HELPERS 
 
 	std::string toHex8(uint8_t value) // Hex - > 00 format
@@ -195,6 +246,7 @@ struct Dashboard {
 
 		uint32_t* registers = system->getRegisters();
 		int numRegisters = system->getNumRegisters();
+
 		int offset_x = 3;
 		int offset_y = 2;
 		int gap = 27;
@@ -228,7 +280,8 @@ struct Dashboard {
 			return;
 		}
 
-		uint32_t pc = system->cpu.pc;
+		uint32_t pc = system->pc;
+
 		int offset_x = 3;
 		int offset_y = 2;
 
@@ -290,7 +343,7 @@ struct Dashboard {
 		// get last PC here. If not found, display N/A		
 		std::string lastPCVal = toHex32(lastPC);
 		lastPCVal += " -> ";
-		lastPCVal += toHex32(system->cpu.pc);
+		lastPCVal += toHex32(system->pc);
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 15, lastPCVal, CYAN, BLACK);
 	}
 
@@ -303,8 +356,9 @@ struct Dashboard {
 			error_SystemNotLoaded();
 			return;
 		}
-		uint32_t sp = system->cpu.registers[2]; // stack pointer is in register x2
-		sp = 0x00000010;
+		uint32_t sp = system->registers[2]; // stack pointer is in register x2
+
+		sp = system->registers[2];
 		int offset_x = 3;
 		int offset_y = 2;
 		std::string spStr = "SP: ";
@@ -315,16 +369,33 @@ struct Dashboard {
 		for (int i = 0; i < 8; ++i) {
 			uint32_t addr = sp + i * 4;
 			uint32_t value;
-			if (system->memory.read32(addr, value)) {
-				std::string addrStr = toHex32_spaced(addr) + ": ";
-				std::string valueStr = toHex32_spaced(value);
-				bufferString(stackRegion.x + offset_x, stackRegion.y + offset_y + 2 + (i*2), addrStr, DEFAULT, BLACK);
-				bufferString(stackRegion.x + offset_x + static_cast<int>(addrStr.length()), stackRegion.y + offset_y + 2 + (i * 2), valueStr, CYAN, BLACK);
-			}
-			else {
-				bufferString(stackRegion.x + offset_x, stackRegion.y + offset_y + 2 + (i*2), "N/A", CYAN, BLACK);
-			}
+			
+			value = system->stackChunk[i];
+			std::string addrStr = toHex32_spaced(addr) + ": ";
+			std::string valueStr = toHex32_spaced(value);
+			bufferString(stackRegion.x + offset_x, stackRegion.y + offset_y + 2 + (i*2), addrStr, DEFAULT, BLACK);
+			bufferString(stackRegion.x + offset_x + static_cast<int>(addrStr.length()), stackRegion.y + offset_y + 2 + (i * 2), valueStr, CYAN, BLACK);
+			
 		}
+	}
+
+	// -------------------- HELPER
+	
+	bool read32(uint32_t lilEndian, uint32_t& value) // reads the specified 4bytes in accordance to little endian format
+	{
+		
+		uint32_t temp = 0;
+		// the memory is little-endian, so we reconstruct/interpret the 4 bytes in little-endian ordering to get the correct value
+		temp |= lilEndian & 0xFF;
+		temp <<= 8;
+		temp |= (lilEndian >> 8) & 0xFF;
+		temp <<= 8;
+		temp |= (lilEndian >> 16) & 0xFF;
+		temp <<= 8;
+		temp |= (lilEndian >> 24) & 0xFF;
+
+		value = temp;
+		return true;
 	}
 
 	// -------------------- MEMORY REGION
@@ -342,7 +413,13 @@ struct Dashboard {
 		std::string byteNumbering = "00 01 02 03 04 05 06 07 08 09 0A 0B";
 		bufferString(memoryRegion.x + offset_x + 12, memoryRegion.y + offset_y - 1, byteNumbering, DEFAULT, BLACK);
 
-		uint32_t start = memoryPreviewAddress;
+		// get memory chunk here
+		uint8_t* memChunk = system->memoryChunk;
+
+		//
+		
+
+		uint32_t start = system->memoryStart;
 		for (int i = 0; i < 8; i++)
 		{
 			uint32_t addr = start + i * 4;
@@ -351,14 +428,8 @@ struct Dashboard {
 			for (int j = 0; j < 12; j++)
 			{
 				temp = 0;
-				if (system->memory.read8(addr + j, temp))
-				{
-					lineStr += toHex8(temp) + " ";
-				}
-				else
-				{
-					lineStr += "?? ";
-				}
+				temp = system->memoryChunk[(i * 12) + j];
+				lineStr += toHex8(temp) + " ";
 			}
 			std::string currAddr = "0x" + toHex32(addr) + ": ";
 			bufferString(memoryRegion.x + offset_x, memoryRegion.y + offset_y + (i*2), currAddr, DEFAULT, BLACK);
