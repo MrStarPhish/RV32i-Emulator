@@ -16,6 +16,10 @@ struct StateSnapshot {
 
 	// control section
 	uint32_t pc; 
+	uint32_t lastPc;
+	uint32_t fetchedInstr;
+	uint32_t decodedInstr;
+	int numExecuted;
 
 	//stack section
 	uint32_t stackChunk[8]; // 8bytes relative to sp
@@ -38,7 +42,11 @@ struct StateSnapshot {
 		{
 			registers[i] = 0;
 		}
-		pc = 0;
+
+		pc = lastPc = 0;
+		fetchedInstr = decodedInstr = 0;
+		numExecuted = 0;
+
 		for (int i = 0; i < 8; i++)
 		{
 			stackChunk[i] = 0;

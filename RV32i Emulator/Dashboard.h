@@ -343,16 +343,11 @@ struct Dashboard {
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y, pcStr, DEFAULT, BLACK);
 		bufferString(controlRegion.x + offset_x + static_cast<int>(pcStr.length()), controlRegion.y + offset_y, pcVal, GREEN, BLACK);
 
-		std::string lastAddrStr = "LastAddr: ";
+		std::string lastAddrStr = "Last PC: ";
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 2, lastAddrStr, DEFAULT, BLACK);
-		uint32_t lastAddr = 0xFFFFFFFF;
-		lastAddr = 0x00000004;
+		uint32_t lastAddr = snapshot->lastPc;
 		// get instruction here. If not found, display N/A
-		if (lastAddr == 0xFFFFFFFF)
-		{
-			bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 3, "N/A", CYAN, BLACK);
-		}
-		else
+		if (snapshot->numExecuted != 0) 
 		{
 			std::string addrVal = toHex32_spaced(lastAddr);
 			bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 3, addrVal, CYAN, BLACK);
@@ -363,36 +358,40 @@ struct Dashboard {
 			diffStr += (diffVal > 0 ? "+" : "") + std::to_string(diffVal) + ")";
 			bufferString(controlRegion.x + offset_x + 12 + static_cast<int>(pcStr.length()), controlRegion.y + offset_y, diffStr, CYAN, BLACK);
 		}
-
-		std::string instrStr = "Instruction: ";
-		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 5, instrStr, DEFAULT, BLACK);
-		uint32_t instr = 0xFFFFFFFF;
-		// get instruction here. If not found, display N/A
-		if (instr == 0xFFFFFFFF)
-		{
-			bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 6, "N/A", CYAN, BLACK);
-		}
 		else
+		{
+			bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 3, "N/A", CYAN, BLACK);
+		}
+
+		std::string instrStr = "Fetched Instruction: ";
+		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 5, instrStr, DEFAULT, BLACK);
+		uint32_t instr = snapshot->fetchedInstr;
+		// get instruction here. If not found, display N/A
+		if (instr)
 		{
 			std::string instrVal = toHex32_spaced(instr);
 			bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 6, instrVal, CYAN, BLACK);
 		}
+		else
+		{
+			bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 6, "N/A", CYAN, BLACK);
+		}
 
 		std::string decodedStr = "Decoded: ";
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 8, decodedStr, DEFAULT, BLACK);
-		std::string decodedVal = "N/A";
+		std::string decodedVal = "COMING SOON";
 		// get instruction here. If not found, display N/A	
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 9, decodedVal, CYAN, BLACK);
 		
 		std::string executedStr = "Executed: ";
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 11, executedStr, DEFAULT, BLACK);
-		uint32_t executed = 0; // no.of instructions executed
+		uint32_t executed = snapshot->numExecuted; // no.of instructions executed
 		// get instruction here. If not found, display N/A		
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 12, std::to_string(executed), CYAN, BLACK);
 
-		std::string lastPCStr = "Last PC: ";
+		std::string lastPCStr = "PC Transition: ";
 		bufferString(controlRegion.x + offset_x, controlRegion.y + offset_y + 14, lastPCStr, DEFAULT, BLACK);
-		uint32_t lastPC = 0; // last program counter value
+		uint32_t lastPC = snapshot->lastPc; // last program counter value
 		// get last PC here. If not found, display N/A		
 		std::string lastPCVal = toHex32(lastPC);
 		lastPCVal += " -> ";
